@@ -1,125 +1,86 @@
 import streamlit as st
-import pandas as pd
-import time
-import io
 from openai import OpenAI
+import time
 
-# ==========================================
-# 🎨 页面全局配置 (让网页看起来更高大上)
-# ==========================================
-st.set_page_config(page_title="爆款文案生成引擎", page_icon="🔥", layout="wide")
+# 1. 设置页面全局属性 (改名字、改图标，设为宽屏展示会更大气)
+st.set_page_config(page_title="AI 小红书爆款文案引擎 | Pro版", page_icon="🔥", layout="centered")
 
-# ==========================================
-# ⚙️ 左侧边栏：配置中心
-# ==========================================
+# 2. 核心包装术：隐藏 Streamlit 官方的水印和菜单，显得更高级
+hide_st_style = """
+            <style>
+            #MainMenu {visibility: hidden;}
+            footer {visibility: hidden;}
+            header {visibility: hidden;}
+            </style>
+            """
+st.markdown(hide_st_style, unsafe_allow_html=True)
+
+# 3. 侧边栏：商业化与高级配置
 with st.sidebar:
-    st.header("⚙️ 引擎配置中心")
-    st.markdown("请填写你的接口信息")
+    st.image("https://img.icons8.com/fluency/96/000000/bot.png", width=60) # 放个AI小图标
+    st.title("文案引擎 Pro")
+    st.markdown("---")
     
-    # 密码框设计，防止别人偷看你的 Key
-    api_key = st.text_input("🔑 API Key", type="password", help="sk-676c72b728b1e40ec0ecec48a6b77203")
-    base_url = st.text_input("🌐 接口地址", value="https://v2.aicodee.com/v1")
-    model_name = st.text_input("🤖 模型名称", value="MiniMax-M2.7-highspeed")
+    # 将原本暴露在外面的配置折叠起来
+    with st.expander("⚙️ 开发者底层配置 (普通用户勿动)"):
+        user_api_key = st.text_input("API Key 秘钥", type="password")
+        base_url = st.text_input("接口调用地址", value="https://v2.aicodee.com")
     
     st.markdown("---")
-    st.markdown("💡 **操作指南**：\n1. 在左侧配好秘钥。\n2. 在右侧上传包含 `产品名称` 和 `核心卖点` 的表格。\n3. 点击开始生成！")
+    st.markdown("### 💼 商业合作")
+    st.info("本系统支持私有化部署。如需购买源码或定制专属 AI 员工，请联系开发者。")
+    st.success("微信: YourWechatHere") # 这里换成你的联系方式
 
-# ==========================================
-# 🧠 AI 核心生成逻辑
-# ==========================================
-def generate_copy(client, product_name, selling_points):
-    prompt = f"""
-    你是一个深谙小红书流量密码的百万粉带货博主。请根据以下信息，写一篇爆款种草文案。
-    
-    【产品名称】：{product_name}
-    【核心卖点】：{selling_points}
-    
-    【写作要求】：
-    1. 标题：吸引眼球，使用痛点/猎奇/干货/数字等爆款标题结构，加Emoji。
-    2. 引入：直接切入目标人群痛点，引发共鸣。
-    3. 正文：将干瘪的【核心卖点】转化为生动的【情绪价值】和【使用场景】。
-    4. 结尾：加入强烈的购买号召。
-    5. 格式：多用空行，视觉清爽，大量使用小红书风格的 Emoji 符号。
-    6. 标签：在文末生成 4-6 个相关的热门话题标签。
-    
-    字数控制在 250 字左右。
-    """
-    try:
-        response = client.chat.completions.create(
-            model=model_name,
-            messages=[
-                {"role": "system", "content": "你是一个专业的小红书营销文案专家。"},
-                {"role": "user", "content": prompt}
-            ],
-            temperature=0.7
-        )
-        return response.choices[0].message.content
-    except Exception as e:
-        return f"生成失败: {e}"
+# 4. 主界面：注重用户体验 (UX)
+st.title("✨ 小红书爆款文案生成系统")
+st.markdown("输入产品基础信息，AI 将自动融合`痛点引流`、`情绪价值`与`促单话术`，10秒输出爆款种草文案。")
 
-# ==========================================
-# 🖥️ 主界面 UI 设计
-# ==========================================
-st.title("🔥 小红书/短视频爆款文案批量生成器")
-st.markdown("告别手动码字！上传商品表格，AI 自动为你批量产出带情绪价值的高转化文案。")
+# 使用分栏让界面更专业
+col1, col2 = st.columns(2)
+with col1:
+    product_name = st.text_input("🎁 产品名称 (必填)", placeholder="例如：极简风陶瓷水杯")
+with col2:
+    target_audience = st.text_input("🎯 目标人群 (选填)", placeholder="例如：打工人、学生党、宝妈")
 
-# 1. 文件上传组件
-uploaded_file = st.file_uploader("📂 请在此拖入或选择您的 Excel 数据表 (.xlsx)", type=["xlsx", "xls"])
+selling_points = st.text_area("🔥 核心卖点 (必填)", placeholder="例如：哑光质感、保持恒温、极简主义美学、送礼首选", height=100)
 
-if uploaded_file is not None:
-    # 2. 读取并预览数据
-    df = pd.read_excel(uploaded_file)
-    st.write("👀 **数据预览：**")
-    st.dataframe(df.head(), use_container_width=True)
-
-    # 3. 数据格式校验
-    if "产品名称" not in df.columns or "核心卖点" not in df.columns:
-        st.error("❌ 格式错误：您的表格中缺少 `产品名称` 或 `核心卖点` 列，请修改后重新上传！")
+# 生成按钮居中放大
+if st.button("🚀 启动爆款引擎，一键生成", use_container_width=True):
+    if not user_api_key:
+        st.error("⚠️ 请先在左侧侧边栏【开发者底层配置】中输入 API Key！")
+    elif not product_name or not selling_points:
+        st.warning("请填写完整产品名称和核心卖点哦~")
     else:
-        # 4. 生成按钮
-        if st.button("🚀 启动自动化生成", type="primary", use_container_width=True):
-            if not api_key:
-                st.warning("⚠️ 滴滴滴！产品经理，你忘记在左侧输入 API Key 啦！")
-            else:
-                # 初始化大模型客户端
-                client = OpenAI(api_key=api_key, base_url=base_url)
+        client = OpenAI(api_key=user_api_key, base_url=base_url)
+        
+        # 增加进度条，让用户感觉系统在“努力工作”，提升价值感
+        progress_text = "AI 正在分析小红书底层流量逻辑..."
+        my_bar = st.progress(0, text=progress_text)
+        for percent_complete in range(100):
+            time.sleep(0.01)
+            my_bar.progress(percent_complete + 1, text=progress_text)
+        my_bar.empty()
+        
+        with st.spinner("✍️ 正在疯狂码字中..."):
+            try:
+                # 优化了提示词，把目标人群加进去了
+                prompt_content = f"产品：{product_name}\n人群：{target_audience}\n卖点：{selling_points}"
                 
-                # 设置进度条和状态提示
-                progress_bar = st.progress(0)
-                status_text = st.empty()
-                generated_copies = []
-                
-                total_items = len(df)
-                
-                # 开始循环处理
-                for i, row in df.iterrows():
-                    product = row['产品名称']
-                    features = row['核心卖点']
-                    
-                    # 更新状态文本
-                    status_text.info(f"⏳ 正在为【{product}】施展爆款魔法... ({i+1}/{total_items})")
-                    
-                    # 调用 AI
-                    copy = generate_copy(client, product, features)
-                    generated_copies.append(copy)
-                    
-                    # 更新进度条
-                    progress_bar.progress((i + 1) / total_items)
-                    time.sleep(1) # 稍微停顿，防止并发过高被封 IP
-                    
-                # 处理完成，将结果写回表格
-                df['爆款文案生成结果'] = generated_copies
-                status_text.success("🎉 大功告成！所有爆款文案已生成完毕，请点击下方按钮下载！")
-                
-                # 5. 生成 Excel 内存文件供下载
-                output = io.BytesIO()
-                with pd.ExcelWriter(output, engine='openpyxl') as writer:
-                    df.to_excel(writer, index=False)
-                processed_data = output.getvalue()
-                
-                st.download_button(
-                    label="📥 立即下载结果表格 (Excel)",
-                    data=processed_data,
-                    file_name="产品文案批量生成结果.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                response = client.chat.completions.create(
+                    model="gpt-3.5-turbo", # 替换为你实际使用的模型名
+                    messages=[
+                        {"role": "system", "content": "你是一个深谙小红书流量密码的百万粉带货博主。你的文案痛点抓得准，情绪价值高，排版清爽，多用Emoji，并在文末附带热门标签。"},
+                        {"role": "user", "content": prompt_content}
+                    ]
                 )
+                result = response.choices[0].message.content
+                
+                # 放点礼花庆祝一下，多巴胺设计
+                st.balloons()
+                st.success("🎉 生成成功！请复制下方文案：")
+                
+                # 用 markdown 块展示，看起来排版更好
+                st.info(result)
+                
+            except Exception as e:
+                st.error(f"抱歉，系统开小差了：{e}")
