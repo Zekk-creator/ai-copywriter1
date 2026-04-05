@@ -6,12 +6,12 @@ import time
 # 1. 核心配置（在这里修改你的秘钥）
 # ==========================================
 # 方式 A：直接写死在代码里（仅限你的 GitHub 仓库是 Private 私有时使用）
-# API_KEY = "sk-676c72b728b1e40ec0ecec48a6b77203"
+# API_KEY = "你的sk-xxxxxx"
 # BASE_URL = "https://v2.aicodee.com/v1"
 
 # 方式 B：使用 Secrets（推荐！安全且隐藏）
 # 请在 Streamlit 官网后台 Settings -> Secrets 填入：
-# API_KEY = "sk-676c72b728b1e40ec0ecec48a6b77203"
+# API_KEY = "你的sk-xxxxxx"
 # BASE_URL = "https://v2.aicodee.com/v1"
 try:
     API_KEY = st.secrets["API_KEY"]
