@@ -1,5 +1,5 @@
 import streamlit as st
-from google import genai
+from openai import OpenAI
 import time
 
 # 1. 设置页面全局属性 (宽屏展示更大气)
@@ -23,7 +23,8 @@ with st.sidebar:
     
     with st.expander("⚙️ 开发者底层配置 (普通用户勿动)"):
         user_api_key = st.text_input("API Key 秘钥", type="password")
-        base_url = st.text_input("接口调用地址", value="https://v2.aicodee.com")
+        # 【关键修复1】：通常中转接口用 OpenAI 库调用时，需要在网址后面加 /v1
+        base_url = st.text_input("接口调用地址", value="https://v2.aicodee.com/v1")
     
     st.markdown("---")
     st.markdown("### 💼 商业合作")
@@ -50,11 +51,8 @@ if st.button("🚀 启动爆款引擎，一键生成", use_container_width=True)
     elif not product_name or not selling_points:
         st.warning("请填写完整产品名称和核心卖点哦~")
     else:
-        # 【修正点1】：换回你测试成功的 google-genai 客户端引擎
-        client = genai.Client(
-            api_key=user_api_key,
-            http_options={'base_url': base_url}
-        )
+        # 初始化 OpenAI 客户端连接中转站
+        client = OpenAI(api_key=user_api_key, base_url=base_url)
         
         progress_text = "AI 正在分析小红书底层流量逻辑..."
         my_bar = st.progress(0, text=progress_text)
@@ -66,26 +64,23 @@ if st.button("🚀 启动爆款引擎，一键生成", use_container_width=True)
         with st.spinner("✍️ 正在疯狂码字中..."):
             try:
                 # 组合提示词
-                prompt_content = f"""
-                你是一个深谙小红书流量密码的百万粉带货博主。请根据以下信息写一篇爆款种草文案。
-                【产品】：{product_name}
-                【人群】：{target_audience}
-                【卖点】：{selling_points}
-                【要求】：痛点抓得准，情绪价值高，排版清爽，多用Emoji，并在文末附带4-6个热门标签。字数250字左右。
-                """
+                prompt_content = f"产品：{product_name}\n人群：{target_audience}\n卖点：{selling_points}"
                 
-                # 【修正点2】：使用你测试成功的模型名称
-                response = client.models.generate_content(
-                    model='MiniMax-M2.7-highspeed',
-                    contents=prompt_content,
+                # 【关键修复2】：使用 OpenAI 的格式，但填入你实际的 MiniMax 模型名称
+                response = client.chat.completions.create(
+                    model="MiniMax-M2.7-highspeed",
+                    messages=[
+                        {"role": "system", "content": "你是一个深谙小红书流量密码的百万粉带货博主。你的文案痛点抓得准，情绪价值高，排版清爽，多用Emoji，并在文末附带热门标签。字数控制在250字左右。"},
+                        {"role": "user", "content": prompt_content}
+                    ]
                 )
                 
-                # 【修正点3】：换回正确的解析方式
-                result = response.text
+                # 提取返回的内容
+                result = response.choices[0].message.content
                 
                 st.balloons()
                 st.success("🎉 生成成功！请复制下方文案：")
                 st.info(result)
                 
             except Exception as e:
-                st.error(f"抱歉，系统开小差了：{e}")
+                st.error(f"抱歉，遇到了一点小问题：{e}")
