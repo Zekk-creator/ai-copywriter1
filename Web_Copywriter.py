@@ -17,7 +17,7 @@ except:
 # ==========================================
 # 2. 动效加载工具与页面配置
 # ==========================================
-st.set_page_config(page_title="AI 文案魔法盒", page_icon="✨", layout="centered")
+st.set_page_config(page_title="AI 文案魔法盒1", page_icon="✨", layout="centered")
 
 # 定义一个加载动画的函数
 def load_lottieurl(url: str):
